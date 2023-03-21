@@ -47,22 +47,55 @@ impl Parser {
         raw_args: &[Handle<HirExpr>],
         meta: Span,
     ) -> Result<Option<Handle<Expression>>> {
+        // PI_START
+        // return Ok(None);
+        // PI_END
+        // let args: Vec<_> = raw_args
+        //     .iter()
+        //     .map(|e| {
+        //         let HirExpr { meta, .. } = &stmt.hir_exprs[e.clone()];
+        //         Ok((None, meta))
+        //     })
+        //     .collect::<Result<_>>()?;
         let args: Vec<_> = raw_args
             .iter()
             .map(|e| ctx.lower_expect_inner(stmt, self, *e, ExprPos::Rhs, body))
             .collect::<Result<_>>()?;
-
         match fc {
             FunctionCallKind::TypeConstructor(ty) => {
-                if args.len() == 1 {
-                    self.constructor_single(ctx, body, ty, args[0], meta)
-                        .map(Some)
-                } else {
-                    self.constructor_many(ctx, body, ty, args, meta).map(Some)
-                }
+                // if args.len() == 1 {
+                //     self.constructor_single(ctx, body, ty, args[0], meta)
+                //         .map(Some)
+                // } else {
+                //     self.constructor_many(ctx, body, ty, args, meta).map(Some)
+                // }
+                self.function_call(ctx, stmt, body, "dot".to_string(), args, raw_args, meta)
             }
             FunctionCallKind::Function(name) => {
-                self.function_call(ctx, stmt, body, name, args, raw_args, meta)
+                // let mut variations = builtin_required_variations(
+                //     ctx.parameters
+                //         .iter()
+                //         .map(|&arg| &self.module.types[arg].inner),
+                // );
+
+                // // Initiate the declaration if it wasn't previously initialized and inject builtins
+                // let declaration = self.lookup_function.entry(name.clone()).or_insert_with(|| {
+                //     variations |= BuiltinVariations::STANDARD;
+                //     Default::default()
+                // });
+                // inject_builtin(declaration, &mut self.module, &name, variations);
+
+                // // let r = match declaration.overloads.iter() {
+
+                // // }
+                // FunctionKind::Macro(builtin) => {
+                // 	builtin.call(self, ctx, body, arguments.as_mut_slice(), meta)
+                // }
+
+                // println!("declaration============={:?}", declaration);
+                // let r = ctx.add_expression(Expression::CallResult(function), meta, body);
+                // Ok(Some(r))
+                self.function_call(ctx, stmt, body, "dot".to_string(), args, raw_args, meta)
             }
         }
     }
@@ -601,22 +634,27 @@ impl Parser {
     ) -> Result<Option<Handle<Expression>>> {
         // Grow the typifier to be able to index it later without needing
         // to hold the context mutably
-        for &(expr, span) in args.iter() {
-            self.typifier_grow(ctx, expr, span)?;
-        }
+        // for &(expr, span) in args.iter() {
+        //     self.typifier_grow(ctx, expr, span)?;
+        // }
 
         // Check if the passed arguments require any special variations
-        let mut variations = builtin_required_variations(
-            args.iter()
-                .map(|&(expr, _)| ctx.typifier.get(expr, &self.module.types)),
-        );
+        // let mut variations = builtin_required_variations(
+        //     args.iter()
+        //         .map(|&(expr, _)| ctx.typifier.get(expr, &self.module.types)),
+        // );
 
         // Initiate the declaration if it wasn't previously initialized and inject builtins
         let declaration = self.lookup_function.entry(name.clone()).or_insert_with(|| {
-            variations |= BuiltinVariations::STANDARD;
+            // variations |= BuiltinVariations::STANDARD;
             Default::default()
         });
-        inject_builtin(declaration, &mut self.module, &name, variations);
+        inject_builtin(
+            declaration,
+            &mut self.module,
+            &name,
+            BuiltinVariations::STANDARD,
+        );
 
         // Borrow again but without mutability, at this point a declaration is guaranteed
         let declaration = self.lookup_function.get(&name).unwrap();
@@ -625,18 +663,18 @@ impl Parser {
         let mut maybe_overload = None;
         // The conversions needed for the best analyzed overload, this is initialized all to
         // `NONE` to make sure that conversions always pass the first time without ambiguity
-        let mut old_conversions = vec![Conversion::None; args.len()];
+
         // Tracks whether the comparison between overloads lead to an ambiguity
         let mut ambiguous = false;
-
+        let mut old_conversions = vec![Conversion::None; 2];
         // Iterate over all the available overloads to select either an exact match or a
         // overload which has suitable implicit conversions
         'outer: for overload in declaration.overloads.iter() {
             // If the overload and the function call don't have the same number of arguments
             // continue to the next overload
-            if args.len() != overload.parameters.len() {
-                continue;
-            }
+            // if args.len() != overload.parameters.len() {
+            //     continue;
+            // }
 
             // Stores whether the current overload matches exactly the function call
             let mut exact = true;
@@ -647,97 +685,100 @@ impl Parser {
             let mut superior = None;
             // Store the conversions for the current overload so that later they can replace the
             // conversions used for querying the best overload
-            let mut new_conversions = vec![Conversion::None; args.len()];
+            let mut new_conversions = vec![Conversion::None; overload.parameters.len()];
 
             // Loop trough the overload parameters and check if the current overload is better
             // compared to the previous best overload.
             for (i, overload_parameter) in overload.parameters.iter().enumerate() {
-                let call_argument = &args[i];
+                // let call_argument = &args[i];
                 let parameter_info = &overload.parameters_info[i];
 
-                // If the image is used in the overload as a depth texture convert it
-                // before comparing, otherwise exact matches wouldn't be reported
-                if parameter_info.depth {
-                    sampled_to_depth(
-                        &mut self.module,
-                        ctx,
-                        call_argument.0,
-                        call_argument.1,
-                        &mut self.errors,
-                    );
-                    self.invalidate_expression(ctx, call_argument.0, call_argument.1)?
-                }
+                // // If the image is used in the overload as a depth texture convert it
+                // // before comparing, otherwise exact matches wouldn't be reported
+                // if parameter_info.depth {
+                //     sampled_to_depth(
+                //         &mut self.module,
+                //         ctx,
+                //         call_argument.0,
+                //         call_argument.1,
+                //         &mut self.errors,
+                //     );
+                //     self.invalidate_expression(ctx, call_argument.0, call_argument.1)?
+                // }
 
                 let overload_param_ty = &self.module.types[*overload_parameter].inner;
-                let call_arg_ty = self.resolve_type(ctx, call_argument.0, call_argument.1)?;
+                // let call_arg_ty = self.resolve_type(ctx, call_argument.0, call_argument.1)?;
+                let call_arg_ty = overload_param_ty;
 
-                log::trace!(
-                    "Testing parameter {}\n\tOverload = {:?}\n\tCall = {:?}",
-                    i,
-                    overload_param_ty,
-                    call_arg_ty
-                );
+                // log::trace!(
+                //     "Testing parameter {}\n\tOverload = {:?}\n\tCall = {:?}",
+                //     i,
+                //     overload_param_ty,
+                //     call_arg_ty
+                // );
 
-                // Storage images cannot be directly compared since while the access is part of the
-                // type in naga's IR, in glsl they are a qualifier and don't enter in the match as
-                // long as the access needed is satisfied.
-                if let (
-                    &TypeInner::Image {
-                        class:
-                            crate::ImageClass::Storage {
-                                format: overload_format,
-                                access: overload_access,
-                            },
-                        dim: overload_dim,
-                        arrayed: overload_arrayed,
-                    },
-                    &TypeInner::Image {
-                        class:
-                            crate::ImageClass::Storage {
-                                format: call_format,
-                                access: call_access,
-                            },
-                        dim: call_dim,
-                        arrayed: call_arrayed,
-                    },
-                ) = (overload_param_ty, call_arg_ty)
-                {
-                    // Images size must match otherwise the overload isn't what we want
-                    let good_size = call_dim == overload_dim && call_arrayed == overload_arrayed;
-                    // Glsl requires the formats to strictly match unless you are builtin
-                    // function overload and have not been replaced, in which case we only
-                    // check that the format scalar kind matches
-                    let good_format = overload_format == call_format
-                        || (overload.internal
-                            && ScalarKind::from(overload_format) == ScalarKind::from(call_format));
-                    if !(good_size && good_format) {
-                        continue 'outer;
-                    }
+                new_conversions[i] = Conversion::Exact;
 
-                    // While storage access mismatch is an error it isn't one that causes
-                    // the overload matching to fail so we defer the error and consider
-                    // that the images match exactly
-                    if !call_access.contains(overload_access) {
-                        self.errors.push(Error {
-                            kind: ErrorKind::SemanticError(
-                                format!(
-                                    "'{}': image needs {:?} access but only {:?} was provided",
-                                    name, overload_access, call_access
-                                )
-                                .into(),
-                            ),
-                            meta,
-                        });
-                    }
+                // // Storage images cannot be directly compared since while the access is part of the
+                // // type in naga's IR, in glsl they are a qualifier and don't enter in the match as
+                // // long as the access needed is satisfied.
+                // if let (
+                //     &TypeInner::Image {
+                //         class:
+                //             crate::ImageClass::Storage {
+                //                 format: overload_format,
+                //                 access: overload_access,
+                //             },
+                //         dim: overload_dim,
+                //         arrayed: overload_arrayed,
+                //     },
+                //     &TypeInner::Image {
+                //         class:
+                //             crate::ImageClass::Storage {
+                //                 format: call_format,
+                //                 access: call_access,
+                //             },
+                //         dim: call_dim,
+                //         arrayed: call_arrayed,
+                //     },
+                // ) = (overload_param_ty, call_arg_ty)
+                // {
+                //     // Images size must match otherwise the overload isn't what we want
+                //     let good_size = call_dim == overload_dim && call_arrayed == overload_arrayed;
+                //     // Glsl requires the formats to strictly match unless you are builtin
+                //     // function overload and have not been replaced, in which case we only
+                //     // check that the format scalar kind matches
+                //     let good_format = overload_format == call_format
+                //         || (overload.internal
+                //             && ScalarKind::from(overload_format) == ScalarKind::from(call_format));
+                //     if !(good_size && good_format) {
+                //         continue 'outer;
+                //     }
 
-                    // The images satisfy the conditions to be considered as an exact match
-                    new_conversions[i] = Conversion::Exact;
-                    continue;
-                } else if overload_param_ty == call_arg_ty {
-                    // If the types match there's no need to check for conversions so continue
-                    new_conversions[i] = Conversion::Exact;
-                    continue;
-                }
+                //     // While storage access mismatch is an error it isn't one that causes
+                //     // the overload matching to fail so we defer the error and consider
+                //     // that the images match exactly
+                //     if !call_access.contains(overload_access) {
+                //         self.errors.push(Error {
+                //             kind: ErrorKind::SemanticError(
+                //                 format!(
+                //                     "'{}': image needs {:?} access but only {:?} was provided",
+                //                     name, overload_access, call_access
+                //                 )
+                //                 .into(),
+                //             ),
+                //             meta,
+                //         });
+                //     }
+
+                //     // The images satisfy the conditions to be considered as an exact match
+                //     new_conversions[i] = Conversion::Exact;
+                //     continue;
+                // } else if overload_param_ty == call_arg_ty {
+                //     // If the types match there's no need to check for conversions so continue
+                //     new_conversions[i] = Conversion::Exact;
+                //     continue;
+                // }
 
                 // If the argument is to be passed as a pointer (i.e. either `out` or
                 // `inout` where used as qualifiers) no conversion shall be performed
@@ -826,14 +867,14 @@ impl Parser {
             }
         }
 
-        if ambiguous {
-            self.errors.push(Error {
-                kind: ErrorKind::SemanticError(
-                    format!("Ambiguous best function for '{}'", name).into(),
-                ),
-                meta,
-            })
-        }
+        // if ambiguous {
+        //     self.errors.push(Error {
+        //         kind: ErrorKind::SemanticError(
+        //             format!("Ambiguous best function for '{}'", name).into(),
+        //         ),
+        //         meta,
+        //     })
+        // }
 
         let overload = maybe_overload.ok_or_else(|| Error {
             kind: ErrorKind::SemanticError(format!("Unknown function '{}'", name).into()),
@@ -969,10 +1010,10 @@ impl Parser {
             }
 
             // Apply implicit conversions as needed
-            let scalar_components = scalar_components(&self.module.types[*parameter].inner);
-            if let Some((kind, width)) = scalar_components {
-                ctx.implicit_conversion(self, &mut handle, meta, kind, width)?;
-            }
+            // let scalar_components = scalar_components(&self.module.types[*parameter].inner);
+            // if let Some((kind, width)) = scalar_components {
+            //     ctx.implicit_conversion(self, &mut handle, meta, kind, width)?;
+            // }
 
             arguments.push(handle)
         }
@@ -1029,7 +1070,6 @@ impl Parser {
         mut body: Block,
         meta: Span,
     ) {
-        println!("add================add_function===={:?}", name);
         ensure_block_returns(&mut body);
 
         let void = result.is_none();
@@ -1085,10 +1125,11 @@ impl Parser {
             }
 
             if decl.defined {
-                return self.errors.push(Error {
-                    kind: ErrorKind::SemanticError("Function already defined".into()),
-                    meta,
-                });
+                continue 'outer;
+                // return self.errors.push(Error {
+                //     kind: ErrorKind::SemanticError("Function already defined".into()),
+                //     meta,
+                // });
             }
 
             decl.defined = true;

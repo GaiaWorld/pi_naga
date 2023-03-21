@@ -164,7 +164,6 @@ impl<'source> ParsingContext<'source> {
     }
 
     pub fn parse(&mut self, parser: &mut Parser) -> Result<()> {
-        println!("parse======================");
         // Body and expression arena for global initialization
         let mut body = Block::new();
         let mut ctx = Context::new(parser, &mut body);

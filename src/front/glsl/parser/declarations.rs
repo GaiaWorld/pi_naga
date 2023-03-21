@@ -107,9 +107,9 @@ impl<'source> ParsingContext<'source> {
             let (mut init, init_meta) = ctx.lower_expect(stmt, parser, expr, ExprPos::Rhs, body)?;
 
             let scalar_components = scalar_components(&parser.module.types[ty].inner);
-            if let Some((kind, width)) = scalar_components {
-                ctx.implicit_conversion(parser, &mut init, init_meta, kind, width)?;
-            }
+            // if let Some((kind, width)) = scalar_components {
+            //     ctx.implicit_conversion(parser, &mut init, init_meta, kind, width)?;
+            // }
 
             Ok((init, init_meta))
         }
@@ -179,10 +179,10 @@ impl<'source> ParsingContext<'source> {
                         self.parse_initializer(parser, ty, ctx.ctx, ctx.body)?;
 
                     let scalar_components = scalar_components(&parser.module.types[ty].inner);
-                    if let Some((kind, width)) = scalar_components {
-                        ctx.ctx
-                            .implicit_conversion(parser, &mut expr, init_meta, kind, width)?;
-                    }
+                    // if let Some((kind, width)) = scalar_components {
+                    //     ctx.ctx
+                    //         .implicit_conversion(parser, &mut expr, init_meta, kind, width)?;
+                    // }
 
                     meta.subsume(init_meta);
 
@@ -290,7 +290,7 @@ impl<'source> ParsingContext<'source> {
                                 TokenValue::LeftBrace if external => {
                                     // This branch handles function definitions
                                     // as you can see by the guard this branch
-                                    // only happens if external is also true
+                                    // only happ	ens if external is also true
 
                                     // parse the body
                                     self.parse_compound_statement(
