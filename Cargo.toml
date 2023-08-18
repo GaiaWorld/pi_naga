@@ -1,6 +1,6 @@
 [package]
 name = "pi_naga"
-version = "0.9.0"
+version = "0.1.0"
 authors = ["Naga Developers"]
 edition = "2018"
 description = "Shader translation infrastructure"
